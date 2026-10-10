@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
+from app.api import auth, diary
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -23,6 +24,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册路由
+app.include_router(auth.router, prefix="/api")
+app.include_router(diary.router, prefix="/api")
 
 
 @app.get("/")
