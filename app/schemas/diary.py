@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.models.diary import Visibility
 
@@ -14,6 +14,7 @@ class DiaryBase(BaseModel):
 
 class DiaryCreate(DiaryBase):
     locationId: Optional[str] = None
+    location: Optional[Dict[str, Any]] = None  # inline location object from frontend
 
 
 class DiaryUpdate(BaseModel):
