@@ -109,7 +109,12 @@ function navigateTo(section) {
   if (section === 'home') loadHome();
   if (section === 'diaries') loadDiaries();
   if (section === 'discover') loadDiscover(discoverTab);
-  if (section === 'map') { setTimeout(initMap, 50); }
+  if (section === 'map') {
+    setTimeout(() => {
+      initMap();
+      if (leafletMap) leafletMap.invalidateSize();
+    }, 150);
+  }
 
   // Reset write form when navigating to it
   if (section === 'write') resetWriteForm();
@@ -341,8 +346,9 @@ let diaryMarkers = [];
 function initMap() {
   if (leafletMap) return; // already initialized
   leafletMap = L.map('leaflet-map').setView([35.0, 105.0], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    attribution: '© 高德地图',
+    subdomains: '1234',
     maxZoom: 18
   }).addTo(leafletMap);
   // Load diary pins after map is ready
