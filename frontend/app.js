@@ -209,7 +209,7 @@ function diaryFeedCard(d) {
   const date = d.createdAt ? new Date(d.createdAt).toLocaleDateString('zh-CN') : '';
   const location = d.location?.name || d.locationName || '';
   const preview = (d.content || '').slice(0, 80) + ((d.content || '').length > 80 ? '…' : '');
-  return `<div class="feed-card">
+  return `<div class="feed-card" onclick="openDiaryDetail(${JSON.stringify(JSON.stringify(d))})" style="cursor:pointer;">
     <div class="feed-card-meta">
       <span class="feed-date">${date}</span>
       ${location ? `<span class="feed-location">📍 ${location}</span>` : ''}
@@ -487,7 +487,7 @@ function discoverCard(d) {
   const loc = d.location?.name || d.locationName || '';
   const author = d.author?.username || d.authorUsername || '';
   const preview = (d.content || '').slice(0, 90) + ((d.content || '').length > 90 ? '…' : '');
-  return `<div class="discover-card">
+  return `<div class="discover-card" onclick="openDiaryDetail(${JSON.stringify(JSON.stringify(d))})" style="cursor:pointer;">
     <div class="dc-header">
       <div class="dc-avatar">${(author || '?')[0].toUpperCase()}</div>
       <div>
