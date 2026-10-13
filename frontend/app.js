@@ -181,8 +181,8 @@ async function loadHome() {
   }
 
   try {
-    const diaries = await apiRequest('GET', '/api/diaries/');
-    allDiaries = diaries || [];
+    const resp = await apiRequest('GET', '/api/diaries/');
+    allDiaries = (resp?.diaries ?? resp) || [];
     renderHomeFeed(allDiaries.slice(0, 5));
     updateStats(allDiaries);
   } catch (err) {
@@ -238,8 +238,8 @@ async function loadDiaries() {
   document.getElementById('diaries-grid').innerHTML =
     '<div style="color:var(--n-4);font-size:var(--text-sm)">加载中…</div>';
   try {
-    const diaries = await apiRequest('GET', '/api/diaries/');
-    allDiaries = diaries || [];
+    const resp = await apiRequest('GET', '/api/diaries/');
+    allDiaries = (resp?.diaries ?? resp) || [];
     renderDiariesGrid(allDiaries);
   } catch (err) {
     document.getElementById('diaries-grid').innerHTML =
@@ -279,7 +279,7 @@ function diaryCard(d) {
   const preview = (d.content || '').slice(0, 100) + ((d.content || '').length > 100 ? '…' : '');
   const visIcon = { PUBLIC: '🌐', PRIVATE: '🔒', FRIENDS_ONLY: '👥' }[d.visibility] || '';
   const moods = d.moodTags || [];
-  return `<div class="diary-card">
+  return `<div class="diary-card" onclick="openDiaryDetail(${JSON.stringify(JSON.stringify(d))})" style="cursor:pointer;">
     <div class="diary-card-header">
       <div class="diary-card-title">${escHtml(d.title || '（无标题）')}</div>
       <span class="vis-badge">${visIcon}</span>
@@ -290,6 +290,31 @@ function diaryCard(d) {
       <div class="mood-tags">${moods.slice(0, 3).map(t => `<span class="mood-tag">${escHtml(t)}</span>`).join('')}</div>
     </div>
   </div>`;
+}
+
+function openDiaryDetail(dJson) {
+  const d = JSON.parse(dJson);
+  const date = d.createdAt ? new Date(d.createdAt).toLocaleDateString('zh-CN') : '';
+  const travelDate = d.travelDate ? new Date(d.travelDate).toLocaleDateString('zh-CN') : '';
+  const location = d.location?.name || d.locationName || '';
+  const visLabel = { PUBLIC: '🌐 公开', PRIVATE: '🔒 仅自己', FRIENDS_ONLY: '👥 仅好友' }[d.visibility] || '';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:var(--sp-6)';
+  overlay.innerHTML = `<div style="background:var(--surface);border-radius:var(--radius-lg);max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:var(--sp-6);box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--sp-4);">
+      <h2 style="font-size:var(--text-xl);font-weight:700;color:var(--n-9);margin:0">${escHtml(d.title || '（无标题）')}</h2>
+      <button onclick="this.closest('[style]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--n-4);line-height:1;">×</button>
+    </div>
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4);font-size:var(--text-sm);color:var(--n-5);">
+      ${travelDate ? `<span>✈️ 旅行日期：${travelDate}</span>` : ''}
+      ${location ? `<span>📍 ${escHtml(location)}</span>` : ''}
+      <span>${visLabel}</span>
+      <span>📅 发布于 ${date}</span>
+    </div>
+    <div style="font-size:var(--text-base);color:var(--n-8);line-height:1.8;white-space:pre-wrap;">${escHtml(d.content || '（无内容）')}</div>
+  </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // ── WRITE DIARY ───────────────────────────────────────────────────
