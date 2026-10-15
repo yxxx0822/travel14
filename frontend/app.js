@@ -15,12 +15,13 @@ let currentSection = 'home';   // active section inside the shell
 let discoverTab = 'latest';
 const _diaryMap = new Map();   // id -> diary object, avoids JSON-in-HTML issues
 
-// Delegated click handler for all diary cards
+// Delegated click handler for feed cards only (diaries/discover use direct onclick)
 document.addEventListener('click', e => {
   const card = e.target.closest('[data-diary-idx]');
   if (!card) return;
   const idx = card.dataset.diaryIdx;
-  const d = _diaryMap.get(idx) || _diaryMap.get(Number(idx));
+  if (!String(idx).startsWith('feed_')) return;
+  const d = _diaryMap.get(idx);
   if (d) openDiaryDetail(d);
 });
 
@@ -369,7 +370,9 @@ function openDiaryDetail(dJson) {
   `;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) { e.stopPropagation(); overlay.remove(); }
+  });
   document.body.appendChild(overlay);
 
   // Close button
