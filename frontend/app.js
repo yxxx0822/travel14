@@ -373,7 +373,7 @@ function openDiaryDetail(dJson) {
   document.body.appendChild(overlay);
 
   // Close button
-  modal.querySelector('#diary-modal-close').addEventListener('click', () => overlay.remove());
+  modal.querySelector('#diary-modal-close').addEventListener('click', e => { e.stopPropagation(); overlay.remove(); });
 
   // Like button (frontend-only toggle for now)
   let liked = false;
