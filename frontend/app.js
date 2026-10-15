@@ -7,7 +7,9 @@ const BASE = 'http://localhost:8002';
 
 // ── State ────────────────────────────────────────────────────────
 let currentUser = null;
-let token = localStorage.getItem('token') || null;
+let _tokenStore = null;
+try { _tokenStore = localStorage.getItem('token'); } catch(e) {}
+let token = _tokenStore || null;
 let allDiaries = [];           // cache for my-diaries list
 let currentSection = 'home';   // active section inside the shell
 let discoverTab = 'latest';
@@ -290,8 +292,8 @@ function diaryCard(d) {
   const preview = (d.content || '').slice(0, 100) + ((d.content || '').length > 100 ? '…' : '');
   const visIcon = { PUBLIC: '🌐', PRIVATE: '🔒', FRIENDS_ONLY: '👥' }[d.visibility] || '';
   const moods = d.moodTags || [];
-  _diaryMap.set(d.id, d);
-  return `<div class="diary-card" data-diary-idx="${d.id}" style="cursor:pointer;">
+  _diaryMap.set(String(d.id), d);
+  return `<div class="diary-card" data-diary-idx="${d.id}" style="cursor:pointer;" onclick="var _d=_diaryMap.get('${d.id}');if(_d)openDiaryDetail(_d);">
     <div class="diary-card-header">
       <div class="diary-card-title">${escHtml(d.title || '（无标题）')}</div>
       <span class="vis-badge">${visIcon}</span>
@@ -577,8 +579,8 @@ function discoverCard(d) {
   const loc = d.location?.name || d.locationName || '';
   const author = d.author?.username || d.authorUsername || '';
   const preview = (d.content || '').slice(0, 90) + ((d.content || '').length > 90 ? '…' : '');
-  _diaryMap.set(d.id, d);
-  return `<div class="discover-card" data-diary-idx="${d.id}" style="cursor:pointer;">
+  _diaryMap.set(String(d.id), d);
+  return `<div class="discover-card" data-diary-idx="${d.id}" style="cursor:pointer;" onclick="var _d=_diaryMap.get('${d.id}');if(_d)openDiaryDetail(_d);">
     <div class="dc-header">
       <div class="dc-avatar">${(author || '?')[0].toUpperCase()}</div>
       <div>
