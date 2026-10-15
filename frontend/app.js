@@ -544,7 +544,8 @@ function renderNearbyList(diaries) {
   }
   list.innerHTML = diaries.slice(0, 8).map(d => {
     const loc = d.location?.name || d.locationName || '';
-    return `<div class="nearby-item">
+    _diaryMap.set(String(d.id), d);
+    return `<div class="nearby-item" style="cursor:pointer;" onclick="var _d=_diaryMap.get('${d.id}');if(_d)openDiaryDetail(_d);">
       <div class="nearby-title">${escHtml(d.title || '（无标题）')}</div>
       ${loc ? `<div class="nearby-loc">📍 ${escHtml(loc)}</div>` : ''}
     </div>`;
