@@ -544,8 +544,8 @@ function renderNearbyList(diaries) {
   }
   list.innerHTML = diaries.slice(0, 8).map(d => {
     const loc = d.location?.name || d.locationName || '';
-    const lat = d.location?.lat ?? d.lat;
-    const lng = d.location?.lng ?? d.lng;
+    const lat = d.location?.latitude ?? d.latitude;
+    const lng = d.location?.longitude ?? d.longitude;
     _diaryMap.set(String(d.id), d);
     const hasCoords = lat != null && lng != null;
     return `<div class="nearby-item" style="cursor:${hasCoords ? 'pointer' : 'default'};" ${hasCoords ? `onclick="if(leafletMap){leafletMap.setView([${lat},${lng}],13);}"` : ''}>
