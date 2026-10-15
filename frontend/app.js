@@ -3,7 +3,7 @@
    Backend: http://localhost:8001/api
    ================================================================ */
 
-const BASE = 'http://localhost:8001';
+const BASE = 'http://localhost:8002';
 
 // ── State ────────────────────────────────────────────────────────
 let currentUser = null;
@@ -11,6 +11,16 @@ let token = localStorage.getItem('token') || null;
 let allDiaries = [];           // cache for my-diaries list
 let currentSection = 'home';   // active section inside the shell
 let discoverTab = 'latest';
+const _diaryMap = new Map();   // id -> diary object, avoids JSON-in-HTML issues
+
+// Delegated click handler for all diary cards
+document.addEventListener('click', e => {
+  const card = e.target.closest('[data-diary-idx]');
+  if (!card) return;
+  const idx = card.dataset.diaryIdx;
+  const d = _diaryMap.get(idx) || _diaryMap.get(Number(idx));
+  if (d) openDiaryDetail(d);
+});
 
 // ── Bootstrap ────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -202,14 +212,15 @@ function renderHomeFeed(diaries) {
     </div>`;
     return;
   }
-  feed.innerHTML = diaries.map(d => diaryFeedCard(d)).join('');
+  feed.innerHTML = diaries.map((d, i) => diaryFeedCard(d, 'feed_' + i)).join('');
 }
 
-function diaryFeedCard(d) {
+function diaryFeedCard(d, idx) {
   const date = d.createdAt ? new Date(d.createdAt).toLocaleDateString('zh-CN') : '';
   const location = d.location?.name || d.locationName || '';
   const preview = (d.content || '').slice(0, 80) + ((d.content || '').length > 80 ? '…' : '');
-  return `<div class="feed-card" onclick='openDiaryDetail(${JSON.stringify(d).replace(/'/g, "&apos;")})' style="cursor:pointer;">
+  _diaryMap.set(idx, d);
+  return `<div class="feed-card" data-diary-idx="${idx}" style="cursor:pointer;">
     <div class="feed-card-meta">
       <span class="feed-date">${date}</span>
       ${location ? `<span class="feed-location">📍 ${location}</span>` : ''}
@@ -279,7 +290,8 @@ function diaryCard(d) {
   const preview = (d.content || '').slice(0, 100) + ((d.content || '').length > 100 ? '…' : '');
   const visIcon = { PUBLIC: '🌐', PRIVATE: '🔒', FRIENDS_ONLY: '👥' }[d.visibility] || '';
   const moods = d.moodTags || [];
-  return `<div class="diary-card" onclick='openDiaryDetail(${JSON.stringify(d).replace(/'/g, "&apos;")})' style="cursor:pointer;">
+  _diaryMap.set(d.id, d);
+  return `<div class="diary-card" data-diary-idx="${d.id}" style="cursor:pointer;">
     <div class="diary-card-header">
       <div class="diary-card-title">${escHtml(d.title || '（无标题）')}</div>
       <span class="vis-badge">${visIcon}</span>
@@ -293,28 +305,106 @@ function diaryCard(d) {
 }
 
 function openDiaryDetail(dJson) {
-  const d = JSON.parse(dJson);
+  const d = (typeof dJson === 'object' && dJson !== null) ? dJson : JSON.parse(dJson);
   const date = d.createdAt ? new Date(d.createdAt).toLocaleDateString('zh-CN') : '';
   const travelDate = d.travelDate ? new Date(d.travelDate).toLocaleDateString('zh-CN') : '';
   const location = d.location?.name || d.locationName || '';
   const visLabel = { PUBLIC: '🌐 公开', PRIVATE: '🔒 仅自己', FRIENDS_ONLY: '👥 仅好友' }[d.visibility] || '';
+  const moods = (d.moodTags || []).map(t => `<span style="background:var(--primary-50,#e8f5e9);color:var(--primary-700,#2e7d32);border-radius:999px;padding:2px 10px;font-size:0.78rem;">${escHtml(t)}</span>`).join('');
+
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:var(--sp-6)';
-  overlay.innerHTML = `<div style="background:var(--surface);border-radius:var(--radius-lg);max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:var(--sp-6);box-shadow:0 8px 32px rgba(0,0,0,.2);">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--sp-4);">
-      <h2 style="font-size:var(--text-xl);font-weight:700;color:var(--n-9);margin:0">${escHtml(d.title || '（无标题）')}</h2>
-      <button onclick="this.closest('[style]').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--n-4);line-height:1;">×</button>
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;border-radius:16px;max-width:640px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.18);overflow:hidden;';
+
+  modal.innerHTML = `
+    <div style="padding:24px 24px 0;flex-shrink:0;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <h2 style="margin:0;font-size:1.3rem;font-weight:700;color:#1a1a1a;line-height:1.3;">${escHtml(d.title || '（无标题）')}</h2>
+        <button id="diary-modal-close" style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#f3f4f6;border:none;cursor:pointer;font-size:1.1rem;color:#6b7280;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:0.82rem;color:#6b7280;">
+        ${travelDate ? `<span style="display:flex;align-items:center;gap:4px;">✈️ ${travelDate}</span>` : ''}
+        ${location ? `<span style="display:flex;align-items:center;gap:4px;">📍 ${escHtml(location)}</span>` : ''}
+        ${visLabel ? `<span>${visLabel}</span>` : ''}
+        ${date ? `<span>📅 ${date}</span>` : ''}
+      </div>
+      ${moods ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">${moods}</div>` : ''}
+      <div style="height:1px;background:#f0f0f0;margin:16px 0 0;"></div>
     </div>
-    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4);font-size:var(--text-sm);color:var(--n-5);">
-      ${travelDate ? `<span>✈️ 旅行日期：${travelDate}</span>` : ''}
-      ${location ? `<span>📍 ${escHtml(location)}</span>` : ''}
-      <span>${visLabel}</span>
-      <span>📅 发布于 ${date}</span>
+
+    <div style="padding:20px 24px;overflow-y:auto;flex:1;font-size:0.97rem;color:#374151;line-height:1.85;white-space:pre-wrap;">${escHtml(d.content || '（无内容）')}</div>
+
+    <div style="padding:0 24px;flex-shrink:0;">
+      <div style="height:1px;background:#f0f0f0;"></div>
+      <div style="display:flex;align-items:center;gap:16px;padding:14px 0;">
+        <button id="diary-like-btn" style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.9rem;padding:6px 10px;border-radius:8px;transition:background .15s;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='none'">
+          <span id="diary-like-icon" style="font-size:1.1rem;">🤍</span>
+          <span id="diary-like-count">${d.likeCount || 0}</span> 赞
+        </button>
+        <span style="color:#e5e7eb;">|</span>
+        <span style="color:#6b7280;font-size:0.9rem;">💬 <span id="diary-comment-count">${(d.comments || []).length}</span> 评论</span>
+      </div>
     </div>
-    <div style="font-size:var(--text-base);color:var(--n-8);line-height:1.8;white-space:pre-wrap;">${escHtml(d.content || '（无内容）')}</div>
-  </div>`;
+
+    <div style="padding:0 24px 20px;flex-shrink:0;">
+      <div id="diary-comments-list" style="margin-bottom:12px;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+        ${(d.comments || []).length === 0 ? '<p style="color:#9ca3af;font-size:0.85rem;margin:0;">还没有评论，来说点什么吧</p>' :
+          (d.comments || []).map(c => `<div style="display:flex;gap:8px;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:600;color:#2e7d32;flex-shrink:0;">${(c.username||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;">
+              <span style="font-size:0.78rem;font-weight:600;color:#374151;">${escHtml(c.username||'匿名')}</span>
+              <p style="margin:2px 0 0;font-size:0.85rem;color:#4b5563;">${escHtml(c.content)}</p>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input id="diary-comment-input" type="text" placeholder="写下你的评论…" style="flex:1;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:0.88rem;outline:none;color:#374151;" onfocus="this.style.borderColor='var(--primary,#4caf50)'" onblur="this.style.borderColor='#e5e7eb'"/>
+        <button id="diary-comment-submit" style="background:var(--primary,#4caf50);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.88rem;cursor:pointer;font-weight:500;">发送</button>
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+
+  // Close button
+  modal.querySelector('#diary-modal-close').addEventListener('click', () => overlay.remove());
+
+  // Like button (frontend-only toggle for now)
+  let liked = false;
+  modal.querySelector('#diary-like-btn').addEventListener('click', () => {
+    liked = !liked;
+    modal.querySelector('#diary-like-icon').textContent = liked ? '❤️' : '🤍';
+    const base = d.likeCount || 0;
+    modal.querySelector('#diary-like-count').textContent = liked ? base + 1 : base;
+  });
+
+  // Comment submit (frontend-only for now)
+  const submitComment = () => {
+    const input = modal.querySelector('#diary-comment-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const list = modal.querySelector('#diary-comments-list');
+    if (list.querySelector('p')) list.innerHTML = '';
+    const username = currentUser?.username || '我';
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+    item.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:600;color:#2e7d32;flex-shrink:0;">${username[0].toUpperCase()}</div>
+      <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;">
+        <span style="font-size:0.78rem;font-weight:600;color:#374151;">${escHtml(username)}</span>
+        <p style="margin:2px 0 0;font-size:0.85rem;color:#4b5563;">${escHtml(text)}</p>
+      </div>`;
+    list.appendChild(item);
+    list.scrollTop = list.scrollHeight;
+    const cnt = modal.querySelector('#diary-comment-count');
+    cnt.textContent = parseInt(cnt.textContent || 0) + 1;
+    input.value = '';
+  };
+  modal.querySelector('#diary-comment-submit').addEventListener('click', submitComment);
+  modal.querySelector('#diary-comment-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitComment(); });
 }
 
 // ── WRITE DIARY ───────────────────────────────────────────────────
@@ -487,7 +577,8 @@ function discoverCard(d) {
   const loc = d.location?.name || d.locationName || '';
   const author = d.author?.username || d.authorUsername || '';
   const preview = (d.content || '').slice(0, 90) + ((d.content || '').length > 90 ? '…' : '');
-  return `<div class="discover-card" onclick='openDiaryDetail(${JSON.stringify(d).replace(/'/g, "&apos;")})' style="cursor:pointer;">
+  _diaryMap.set(d.id, d);
+  return `<div class="discover-card" data-diary-idx="${d.id}" style="cursor:pointer;">
     <div class="dc-header">
       <div class="dc-avatar">${(author || '?')[0].toUpperCase()}</div>
       <div>
