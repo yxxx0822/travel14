@@ -118,6 +118,10 @@ function navigateTo(section) {
   };
   document.getElementById('topbar-title').textContent = titles[section] || '';
 
+  // Hide write button when already on write page
+  const topbarBtn = document.querySelector('.topbar-actions .btn');
+  if (topbarBtn) topbarBtn.style.display = section === 'write' ? 'none' : '';
+
   // Lazy-load data per section
   if (section === 'home') loadHome();
   if (section === 'diaries') loadDiaries();
@@ -419,12 +423,25 @@ function resetWriteForm() {
 }
 
 function updatePreview() {
-  const title = document.getElementById('w-title').value || '日记标题';
-  const content = document.getElementById('w-content').value || '在这里写下你的旅行故事…';
-  const loc = document.getElementById('w-location-name').value || '未填写地点';
-  document.getElementById('preview-title').textContent = title;
-  document.getElementById('preview-text').textContent = content.slice(0, 200);
-  document.getElementById('preview-location').textContent = `📍 ${loc}`;
+  // preview panel removed; no-op
+}
+
+function handleMediaPreview(input) {
+  const list = document.getElementById('media-preview-list');
+  if (!list) return;
+  list.innerHTML = '';
+  Array.from(input.files).forEach(file => {
+    const isVideo = file.type.startsWith('video/');
+    const url = URL.createObjectURL(file);
+    const item = document.createElement('div');
+    item.style.cssText = 'position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;background:#f3f4f6;flex-shrink:0;';
+    if (isVideo) {
+      item.innerHTML = `<video src="${url}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);color:#fff;font-size:1.4rem;">▶</div>`;
+    } else {
+      item.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" alt="${file.name}">`;
+    }
+    list.appendChild(item);
+  });
 }
 
 async function createDiary(e) {

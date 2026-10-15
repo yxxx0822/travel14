@@ -284,14 +284,15 @@
           </div>
         </div>
 
-        <!-- Preview -->
-        <div class="diary-preview">
-          <div class="preview-cover">🌄</div>
-          <div class="preview-content">
-            <div class="preview-title" id="preview-title">日记标题</div>
-            <div class="preview-location" id="preview-location">📍 未填写地点</div>
-            <div class="preview-text" id="preview-text">在这里写下你的旅行故事…</div>
-          </div>
+        <!-- Media Upload -->
+        <div class="diary-preview" style="background:#fff;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-weight:600;font-size:1rem;color:#374151;">📎 上传照片 / 视频</div>
+          <label id="media-upload-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:2px dashed #d1d5db;border-radius:10px;padding:32px 16px;cursor:pointer;transition:border-color .15s;background:#fafafa;" onmouseenter="this.style.borderColor='var(--primary,#4caf50)'" onmouseleave="this.style.borderColor='#d1d5db'">
+            <span style="font-size:2.2rem;">🖼️</span>
+            <span style="font-size:0.9rem;color:#6b7280;text-align:center;">点击或拖拽上传<br><span style="font-size:0.78rem;color:#9ca3af;">支持 JPG、PNG、GIF、MP4、MOV</span></span>
+            <input type="file" id="w-media" multiple accept="image/*,video/*" style="display:none;" onchange="handleMediaPreview(this)">
+          </label>
+          <div id="media-preview-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
       </div>
     </div>
